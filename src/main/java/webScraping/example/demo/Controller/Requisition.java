@@ -5,8 +5,11 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 import webScraping.example.demo.Anime.Anime;
+import webScraping.example.demo.Anime.Recomendations;
+import webScraping.example.demo.Anime.Search;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -18,7 +21,7 @@ import java.util.UUID;
 public class Requisition {
     public String url = "https://animefire.net";
 
-    @GetMapping("/req")
+    @GetMapping("/last-release")
     public List<Anime> home() throws Exception{
 
         Document doc = Jsoup.connect(url).get();
@@ -44,20 +47,64 @@ public class Requisition {
         return animeList;
     }
 
-    @GetMapping("/test")
-    public List recomend() throws IOException {
+    @GetMapping("/recomend")
+    public List recomend() throws IOException, InterruptedException {
         String url = "https://animefire.net";
         Document doc = Jsoup.connect(url).get();
-        Elements recomendation = doc.select("divArticleLancamentos .containerAnimes a");
-        List<String> test = new ArrayList<>();
+        // Pausar a execução por 3 segundos para permitir o carregamento dos elementos
+        //Thread.sleep(TimeUnit.SECONDS.toMillis(3));
+
+        Elements recomendation = doc.select("article.containerAnimes > a");
+        Elements recomendationImg = doc.select("article.containerAnimes img");
+        List<Recomendations> recomendationsList = new ArrayList<>();
 
         for(int i = 0; i < recomendation.size();i++){
+            Recomendations recomendations = new Recomendations();
 
             Element recomend = recomendation.get(i);
-            test.add(recomend.attr("href").toString());
+            Element recomendImg = recomendationImg.get(i);
+
+            recomendations.setLink(recomend.attr("href").toString());
+            recomendations.setName(recomendImg.attr("alt").toString());
+            recomendations.setImg(recomendationImg.attr("data-src").toString());
+            recomendations.setId(UUID.randomUUID().toString());
+
+            recomendationsList.add(recomendations);
+        }
+        return recomendationsList;
+    }
+
+    @GetMapping("/search/{anime}")
+    public List search(@PathVariable String anime) throws IOException {
+        String url ="https://animefire.net/pesquisar/"+anime;
+
+        Document doc = Jsoup.connect(url)
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .post();
+
+        Elements searchResults = doc.select(".col-6.col-sm-4.col-md-3.col-lg-2.mb-1.minWDanime.divCardUltimosEps");
+        Elements linkSearchResults = doc.select("article.card.cardUltimosEps a");
+        Elements imgSearchResults = doc.select("article.card.cardUltimosEps img");
+        List<Search> searchResult = new ArrayList<>();
+
+        for(int i =0; i < searchResults.size();i++){
+            Element search = searchResults.get(i);
+            Element linkSearch = linkSearchResults.get(i);
+            Element imgSearch = imgSearchResults.get(i);
+
+            Search search1 = new Search();
+            search1.setNome(search.attr("title"));
+            search1.setLink(linkSearch.attr("href"));
+            search1.setImgUrl(imgSearch.attr("data-src"));
+
+
+            searchResult.add(search1);
+
 
         }
-        return test;
+        return searchResult;
+
+
     }
 
 
